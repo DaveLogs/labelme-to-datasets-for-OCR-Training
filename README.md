@@ -1,11 +1,10 @@
-# labelme2TDS
+# labelme-to-datasets-for-OCR-Training
 
-Convert 'labelme' project's output data to 'training-datasets-splitter' project's format data.
+Convert 'labelme' project's output data to a dataset for OCR model training.
 
 
 ## References
 1. 'labelme' project: https://github.com/wkentaro/labelme
-2. 'training-datasets-splitter' project: https://github.com/DaveLogs/training-datasets-splitter
 
 
 ## Procedures
