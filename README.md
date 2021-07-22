@@ -1,4 +1,4 @@
-# labelme-to-datasets-for-OCR-training
+# labelme-to-datasets-for-OCR-model-training
 
 Convert 'labelme' project's output data to a dataset for OCR model training.
 
