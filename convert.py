@@ -108,9 +108,11 @@ def run(args):
         with Image.open(os.path.join(input_dir, image_file)) as img:
             for jj, shape in enumerate(json_data["shapes"]):
                 label = shape["label"]
-                bbox = [int(shape["points"][0][0]), int(shape["points"][0][1]),     # left, upper
-                        int(shape["points"][1][0]), int(shape["points"][1][1])]     # right, lower
-                # print(f"label: {label}, bbox: {bbox}")
+                bbox = get_bbox(shape["points"])
+
+                if bbox[0] >= img.size[0] or bbox[1] >= img.size[1] or bbox[2] >= img.size[0] or bbox[3] >= img.size[1]:
+                    print(f"{image_file} {label} label's bbox error: {bbox}")
+                    continue
 
                 output_file = f"{filename}_{jj:03d}{ext}"
                 crop_image = img.crop(bbox)
@@ -135,6 +137,18 @@ def get_json_file(json_files, json_count, filename):
     return json_files[idx]
 
 
+def get_bbox(points):
+    left = int(min(points[0][0], points[1][0]))
+    upper = int(min(points[0][1], points[1][1]))
+    right = int(max(points[0][0], points[1][0]))
+    lower = int(max(points[0][1], points[1][1]))
+
+    bbox = [left, upper, right, lower]
+    # print(f"bbox: {bbox}")
+
+    return bbox
+
+
 def get_files(path, except_file=""):
     file_list = []
     json_files = []
@@ -149,7 +163,7 @@ def get_files(path, except_file=""):
         _, ext = os.path.splitext(file)
         if ext == ".json":
             json_files.append(file)
-        elif ext in [".jpg", "jpeg", "png"]:
+        elif ext in [".jpg", ".JPG", ".jpeg", ".JPEG", ".png", ".PNG"]:
             image_files.append(file)
         else:
             sys.exit(f"Invalid file '{file}'.")
