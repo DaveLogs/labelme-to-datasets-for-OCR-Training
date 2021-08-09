@@ -33,15 +33,14 @@ Convert 'labelme' project's output data to a dataset for OCR model training.
 ## Output data structure:
 
     /output
-    ├── /images
-    │   #   [filename]_[idx].[ext]
-    │   ├── image00001_00001.png
-    │   ├── image00001_00002.png
-    │   ├── image00002_00001.png
-    │   ├── image00002_00002.png
-    │   └── ...
-    │
-    └── labels.txt
+    └── /images
+        #   [filename]_[idx].[ext]
+        ├── image00001_00001.png
+        ├── image00001_00002.png
+        ├── image00002_00001.png
+        ├── image00002_00002.png
+        ├── ...
+        └── labels.txt
 
 * Label file structure:
 
