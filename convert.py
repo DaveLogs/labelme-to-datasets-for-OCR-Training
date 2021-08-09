@@ -32,15 +32,15 @@ Convert 'labelme' project's output data to a dataset for OCR model training.
 ## Output data structure:
 
     /output
-    ├── /images
-    │   #   [filename]_[idx].[ext]
-    │   ├── image00001_00001.png
-    │   ├── image00001_00002.png
-    │   ├── image00002_00001.png
-    │   ├── image00002_00002.png
-    │   └── ...
-    │
-    └── labels.txt
+    └── /images
+        #   [filename]_[idx].[ext]
+        ├── image00001_00001.png
+        ├── image00001_00002.png
+        ├── image00002_00001.png
+        ├── image00002_00002.png
+        ├── ...
+        └── labels.txt
+
 
 * Label file structure:
 
@@ -64,30 +64,26 @@ import argparse
 from PIL import Image
 
 
-def run(args):
+def run(input_path, output_path, log):
     """ Convert 'labelme' project's output data to a dataset for OCR model training. """
 
-    if not os.path.exists(args.input_path):
-        sys.exit(f"Can't find '{os.path.abspath(args.input_path)}' directory.")
+    if not os.path.exists(input_path):
+        sys.exit(f"Can't find '{os.path.abspath(input_path)}' directory.")
 
-    if os.path.isdir(args.output_path):
-        sys.exit(f"'{os.path.abspath(args.output_path)}' directory is already exists.")
-        # print(f"'{os.path.abspath(args.output_path)}' directory is already exists.")
-        # shutil.rmtree(args.output_path)
+    if os.path.isdir(output_path):
+        sys.exit(f"'{os.path.abspath(output_path)}' directory is already exists.")
+        # print(f"'{os.path.abspath(output_path)}' directory is already exists.")
+        # shutil.rmtree(output_path)
+    else:
+        os.makedirs(output_path)
 
-    output_dirs = create_working_directory(args.output_path, ["images"])
-
-    input_dir = args.input_path
-    output_root_dir = output_dirs[0]
-    output_images_dir = output_dirs[1]
-
-    files, count, json_files, json_count, image_files, image_count = get_files(args.input_path)
+    files, count, json_files, json_count, image_files, image_count = get_files(input_path)
 
     if json_count != image_count:
         sys.exit(f"The number of json files and image files does not match exactly")
 
     start_time = time.time()
-    labels = open(os.path.join(output_root_dir, "labels.txt"), "w", encoding="utf8")
+    labels = open(os.path.join(output_path, "labels.txt"), "w", encoding="utf8")
 
     digits = len(str(image_count))
     for ii, image_file in enumerate(image_files):
@@ -102,21 +98,22 @@ def run(args):
             print(f"Can't find '{filename}' json file.")
             continue
 
-        with open(os.path.join(input_dir, json_file)) as f:
+        with open(os.path.join(input_path, json_file)) as f:
             json_data = json.load(f)
 
-        with Image.open(os.path.join(input_dir, image_file)) as img:
+        with Image.open(os.path.join(input_path, image_file)) as img:
             for jj, shape in enumerate(json_data["shapes"]):
                 label = shape["label"]
                 bbox = get_bbox(shape["points"])
 
                 if bbox[0] >= img.size[0] or bbox[1] >= img.size[1] or bbox[2] >= img.size[0] or bbox[3] >= img.size[1]:
-                    print(f"{image_file} {label} label's bbox error: {bbox}")
+                    # print(f"{image_file} {label} label's bbox error: {bbox}")
+                    log.write(f"'{image_file}'s {label} bbox: '{bbox}'\n")
                     continue
 
                 output_file = f"{filename}_{jj:03d}{ext}"
                 crop_image = img.crop(bbox)
-                crop_image.save(os.path.join(output_images_dir, output_file))
+                crop_image.save(os.path.join(output_path, output_file))
 
                 labels.write(f"{output_file}\t{label}\n")
 
@@ -175,7 +172,7 @@ def get_files(path, except_file=""):
     return file_list, len(file_list), json_files, len(json_files), image_files, len(image_files)
 
 
-def create_working_directory(root, sub_dirs):
+def create_working_directory(root, sub_dirs=None):
     dirs = [root]
     os.makedirs(root)
     for sub in sub_dirs:
@@ -189,6 +186,7 @@ def create_working_directory(root, sub_dirs):
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Convert 'labelme' project's output data to a dataset for OCR model training")
 
+    parser.add_argument("--group_name", type=str, help="Define the name of the group to be converted")
     parser.add_argument("--input_path", type=str, required=True, help="Data path of 'labelme' project's output data")
     parser.add_argument("--output_path", type=str, required=True,
                         help="Data path for a datasest use in OCR model training")
@@ -199,4 +197,32 @@ def parse_arguments():
 
 if __name__ == '__main__':
     arguments = parse_arguments()
-    run(arguments)
+
+    if arguments.group_name:
+        groups = [arguments.group_name]
+    else:
+        groups = [g for g in os.listdir(arguments.input_path)]
+
+    if os.path.isdir(arguments.output_path):
+        sys.exit(f"'{os.path.abspath(arguments.output_path)}' directory is already exists.")
+    else:
+        os.makedirs(arguments.output_path)
+
+    error_log = open(os.path.join(arguments.output_path, "error.txt"), 'a')
+    dashed_line = '-' * 80
+
+    for ii, group in enumerate(groups):
+        print("\n[%d/%d] group: '%s'" % (ii+1, len(groups), group))
+        print("-" * 40)
+
+        error_log.write(f"Convert error logs of '{group}'\n")
+        error_log.write(dashed_line + '\n')
+
+        input_path = os.path.join(arguments.input_path, group)
+        output_path = os.path.join(arguments.output_path, group)
+
+        run(input_path, output_path, error_log)
+
+        error_log.write(dashed_line + '\n')
+
+    error_log.close()
